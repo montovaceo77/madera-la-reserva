@@ -139,6 +139,17 @@
         <button type="button" class="add-item-btn" id="addItemBtn">+ Agregar ítem de madera</button>
       </div>
 
+      <div class="row two">
+        <div>
+          <label for="flete">Flete (opcional)</label>
+          <input type="number" id="flete" step="any" min="0" placeholder="0">
+        </div>
+        <div>
+          <label for="costoCorte">Costo de corte (opcional)</label>
+          <input type="number" id="costoCorte" step="any" min="0" placeholder="0">
+        </div>
+      </div>
+
       <div class="row">
         <div>
           <label for="notas">Notas (opcional)</label>
@@ -197,6 +208,11 @@
   </section>
 
   <section>
+    <h3>Rentabilidad</h3>
+    <div class="summary-grid" id="rentabilityGrid"></div>
+  </section>
+
+  <section>
     <h3>Resumen por empresa</h3>
     <div class="summary-grid" id="summaryGrid"></div>
   </section>
@@ -234,11 +250,13 @@
   function groupTrips(rows) {
     const map = {};
     rows.forEach(r => {
-      if (!map[r.viajeId]) map[r.viajeId] = { id: r.viajeId, fecha: r.fecha, empresa: r.empresa, notas: r.notas, items: [] };
+      if (!map[r.viajeId]) map[r.viajeId] = { id: r.viajeId, fecha: r.fecha, empresa: r.empresa, notas: r.notas, flete: parseFloat(r.flete) || 0, costoCorte: parseFloat(r.costoCorte) || 0, items: [] };
       map[r.viajeId].items.push({ tipo: r.tipo, cantidad: r.cantidad, medida: r.medida, precioUnitario: r.precioUnitario, subtotal: r.subtotal });
     });
-    return Object.values(map).map(t => ({ ...t, total: t.items.reduce((s, i) => s + (i.subtotal || 0), 0) }))
-      .sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+    return Object.values(map).map(t => {
+      const total = t.items.reduce((s, i) => s + (i.subtotal || 0), 0);
+      return { ...t, total, neto: total - t.flete - t.costoCorte };
+    }).sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
   }
 
   async function loadData() {
@@ -255,7 +273,7 @@
   }
 
   function renderAll() {
-    renderCompanySelects(); renderFilters(); renderTrips(); renderPayments(); renderHero(); renderSummary();
+    renderCompanySelects(); renderFilters(); renderTrips(); renderPayments(); renderHero(); renderRentability(); renderSummary();
   }
 
   async function postAction(payload, applyLocal) {
@@ -400,6 +418,8 @@
   function resetTripForm() {
     document.getElementById('tripForm').reset();
     document.getElementById('fecha').valueAsDate = new Date();
+    document.getElementById('flete').value = '';
+    document.getElementById('costoCorte').value = '';
     formItems = []; addFormItem('Rolo'); updateTotalPreview();
     editingTripId = null;
     document.getElementById('submitBtn').textContent = 'Registrar viaje';
@@ -410,6 +430,8 @@
     editingTripId = t.id;
     document.getElementById('fecha').value = t.fecha;
     document.getElementById('notas').value = t.notas || '';
+    document.getElementById('flete').value = t.flete || '';
+    document.getElementById('costoCorte').value = t.costoCorte || '';
     formItems = (t.items || []).map(it => ({
       uid: ++itemIdSeq, tipo: it.tipo,
       cantidad: it.cantidad != null ? String(it.cantidad) : '',
@@ -443,11 +465,16 @@
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
 
+    const flete = parseFloat(document.getElementById('flete').value) || 0;
+    const costoCorte = parseFloat(document.getElementById('costoCorte').value) || 0;
+
     const payload = {
       action: editingTripId ? 'updateTrip' : 'addTrip',
       fecha: document.getElementById('fecha').value,
       empresa,
       items,
+      flete,
+      costoCorte,
       notas: document.getElementById('notas').value.trim()
     };
     if (editingTripId) payload.viajeId = editingTripId;
@@ -455,7 +482,7 @@
     const wasEditing = editingTripId;
     const ok = await postAction(payload, (data) => {
       const total = items.reduce((s, i) => s + i.subtotal, 0);
-      const tripObj = { id: wasEditing || data.viajeId, fecha: payload.fecha, empresa, notas: payload.notas, items, total };
+      const tripObj = { id: wasEditing || data.viajeId, fecha: payload.fecha, empresa, notas: payload.notas, items, flete, costoCorte, total, neto: total - flete - costoCorte };
       if (wasEditing) {
         const idx = trips.findIndex(t => t.id === wasEditing);
         if (idx > -1) trips[idx] = tripObj; else trips.unshift(tripObj);
@@ -555,8 +582,19 @@
 
       const totalLine = document.createElement('div');
       totalLine.className = 'total-line';
-      totalLine.innerHTML = `<span>Total del viaje</span><span>${fmt.format(t.total)}</span>`;
+      totalLine.innerHTML = `<span>Total facturado</span><span>${fmt.format(t.total)}</span>`;
       row.appendChild(totalLine);
+
+      if (t.flete || t.costoCorte) {
+        const costLine = document.createElement('div');
+        costLine.className = 'trip-item-line';
+        costLine.innerHTML = `<span class="desc">Flete ${fmt.format(t.flete)} · Corte ${fmt.format(t.costoCorte)}</span>`;
+        row.appendChild(costLine);
+      }
+      const netoLine = document.createElement('div');
+      netoLine.className = 'trip-item-line';
+      netoLine.innerHTML = `<span class="desc">Utilidad neta</span><span class="amt">${fmt.format(t.neto)}</span>`;
+      row.appendChild(netoLine);
 
       list.appendChild(row);
     });
@@ -591,6 +629,23 @@
     document.getElementById('heroCount').textContent = fmtNum(trips.length);
     const pendingPriceCount = trips.filter(t => (t.items || []).some(it => !it.precioUnitario)).length;
     document.getElementById('heroPendientePrecio').textContent = fmtNum(pendingPriceCount);
+  }
+
+  function renderRentability() {
+    const grid = document.getElementById('rentabilityGrid');
+    grid.innerHTML = '';
+    const ingresos = trips.reduce((s, t) => s + (t.total || 0), 0);
+    const fletes = trips.reduce((s, t) => s + (t.flete || 0), 0);
+    const cortes = trips.reduce((s, t) => s + (t.costoCorte || 0), 0);
+    const neto = ingresos - fletes - cortes;
+    const card = document.createElement('div');
+    card.className = 'summary-card';
+    card.innerHTML = `<div class="name">Total de la operación</div><div class="stats">
+      <div>Ingresos<span class="v">${fmt.format(ingresos)}</span></div>
+      <div>Fletes<span class="v">${fmt.format(fletes)}</span></div>
+      <div>Cortes<span class="v">${fmt.format(cortes)}</span></div>
+      <div>Utilidad neta<span class="v pendiente-v">${fmt.format(neto)}</span></div></div>`;
+    grid.appendChild(card);
   }
 
   function renderSummary() {
