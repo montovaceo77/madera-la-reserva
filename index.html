@@ -168,7 +168,7 @@
       <div class="row">
         <div>
           <label for="pagoMonto">Monto recibido</label>
-          <input type="number" id="pagoMonto" step="100" min="0" required placeholder="Puede cubrir uno o varios viajes">
+          <input type="number" id="pagoMonto" step="any" min="0" required placeholder="Puede cubrir uno o varios viajes">
         </div>
       </div>
       <div class="row">
@@ -345,7 +345,7 @@
       const precioLabel = document.createElement('label');
       precioLabel.textContent = (item.tipo === 'Rolo' ? 'Precio por tonelada' : 'Precio por unidad') + ' (opcional si aún no lo sabes)';
       const precioInput = document.createElement('input');
-      precioInput.type = 'number'; precioInput.step = '100'; precioInput.min = '0'; precioInput.placeholder = 'Pendiente';
+      precioInput.type = 'number'; precioInput.step = 'any'; precioInput.min = '0'; precioInput.placeholder = 'Pendiente';
       precioInput.value = item.precio;
       precioInput.addEventListener('input', () => { item.precio = precioInput.value; updateItemSubtotal(row, item); updateTotalPreview(); });
       precioWrap.appendChild(precioLabel); precioWrap.appendChild(precioInput);
