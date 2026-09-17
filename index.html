@@ -236,6 +236,21 @@
   const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
   const fmtNum = (n) => new Intl.NumberFormat('es-CO').format(n);
 
+  // Accepts a plain "YYYY-MM-DD" or a full ISO datetime (in case the sheet
+  // ever hands back a raw date) and always returns just the date part.
+  function toDateOnly(val) {
+    if (!val) return '';
+    const s = String(val);
+    return s.indexOf('T') !== -1 ? s.split('T')[0] : s;
+  }
+  function fechaLegible(val) {
+    const d = toDateOnly(val);
+    if (!d) return '';
+    const parsed = new Date(d + 'T00:00:00');
+    if (isNaN(parsed.getTime())) return d;
+    return parsed.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
   let companies = [];
   let trips = [];
   let payments = [];
@@ -261,13 +276,13 @@
   function groupTrips(rows) {
     const map = {};
     rows.forEach(r => {
-      if (!map[r.viajeId]) map[r.viajeId] = { id: r.viajeId, fecha: r.fecha, empresa: r.empresa, notas: r.notas, flete: parseFloat(r.flete) || 0, corteToneladas: parseFloat(r.corteToneladas) || 0, cortePrecioTon: parseFloat(r.cortePrecioTon) || 0, costoCorte: parseFloat(r.costoCorte) || 0, items: [] };
+      if (!map[r.viajeId]) map[r.viajeId] = { id: r.viajeId, fecha: toDateOnly(r.fecha), empresa: r.empresa, notas: r.notas, flete: parseFloat(r.flete) || 0, corteToneladas: parseFloat(r.corteToneladas) || 0, cortePrecioTon: parseFloat(r.cortePrecioTon) || 0, costoCorte: parseFloat(r.costoCorte) || 0, items: [] };
       map[r.viajeId].items.push({ tipo: r.tipo, cantidad: r.cantidad, medida: r.medida, precioUnitario: r.precioUnitario, subtotal: r.subtotal });
     });
     return Object.values(map).map(t => {
       const total = t.items.reduce((s, i) => s + (i.subtotal || 0), 0);
       return { ...t, total, neto: total - t.flete - t.costoCorte };
-    }).sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+    }).sort((a, b) => (a.fecha > b.fecha ? 1 : -1));
   }
 
   async function loadData() {
@@ -277,7 +292,7 @@
       const data = await res.json();
       trips = groupTrips(data.trips || []);
       companies = (data.companies || []).map(nombre => ({ nombre }));
-      payments = (data.payments || []).slice().sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+      payments = (data.payments || []).slice().sort((a, b) => (a.fecha > b.fecha ? 1 : -1));
       hideOfflineNote();
       renderAll();
     } catch (e) { showOfflineNote(); }
@@ -450,7 +465,7 @@
 
   function startEditTrip(t) {
     editingTripId = t.id;
-    document.getElementById('fecha').value = t.fecha;
+    document.getElementById('fecha').value = toDateOnly(t.fecha);
     document.getElementById('notas').value = t.notas || '';
     document.getElementById('flete').value = t.flete || '';
     document.getElementById('corteToneladas').value = t.corteToneladas || '';
@@ -517,7 +532,7 @@
       } else {
         trips.unshift(tripObj);
       }
-      trips.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+      trips.sort((a, b) => (a.fecha > b.fecha ? 1 : -1));
     });
     if (ok) resetTripForm();
     submitBtn.disabled = false;
@@ -540,7 +555,7 @@
       notas: document.getElementById('pagoNotas').value.trim()
     }, (data) => {
       payments.unshift({ pagoId: data.pagoId, fecha: document.getElementById('pagoFecha').value, empresa, monto, notas: document.getElementById('pagoNotas').value.trim() });
-      payments.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+      payments.sort((a, b) => (a.fecha > b.fecha ? 1 : -1));
     });
 
     if (ok) {
@@ -579,7 +594,7 @@
     filtered.forEach(t => {
       const row = document.createElement('div');
       row.className = 'trip';
-      const fechaFmt = t.fecha ? new Date(t.fecha + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+      const fechaFmt = fechaLegible(t.fecha);
 
       const head = document.createElement('div');
       head.className = 'trip-head';
@@ -638,7 +653,7 @@
     filtered.forEach(p => {
       const row = document.createElement('div');
       row.className = 'payment';
-      const fechaFmt = p.fecha ? new Date(p.fecha + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+      const fechaFmt = fechaLegible(p.fecha);
       const left = document.createElement('div');
       left.innerHTML = `<div class="empresa">${p.empresa}</div><div class="meta">${fechaFmt}${p.notas ? ' · ' + p.notas : ''}</div><div class="monto">${fmt.format(p.monto)}</div>`;
       const del = document.createElement('button');
