@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Madera la Reserva</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F0EEE3; --bg-alt: #E4E0D0; --card: #FBFAF5; --text: #1E271F; --text-muted: #5F6858;
+    --primary: #2E4A3A; --primary-text: #F5F3E8; --accent: #B0752E; --accent-bg: #F3E4CC;
+    --positive: #3F6B45; --positive-bg: #DEE8DA; --border: #D4CEBB; --danger: #A5432B; --focus: #2E4A3A;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; line-height: 1.45; }
+  h1, h2, h3 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; margin: 0; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 28px 18px 80px; }
+  header.top { margin-bottom: 22px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  header.top .kicker { color: var(--text-muted); font-size: 0.92rem; margin: 0 0 4px; }
+  header.top h1 { font-size: 1.7rem; color: var(--primary); }
+  .refresh-btn { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-family: inherit; font-size: 0.84rem; cursor: pointer; white-space: nowrap; }
+  .hero { background: var(--primary); color: var(--primary-text); border-radius: 14px; padding: 22px 22px 20px; margin-bottom: 22px; }
+  .hero .label { font-size: 0.88rem; opacity: 0.82; margin-bottom: 4px; }
+  .hero .amount { font-family: 'Fraunces', Georgia, serif; font-size: 2.4rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .hero .breakdown { display: flex; gap: 22px; margin-top: 14px; font-size: 0.86rem; opacity: 0.9; flex-wrap: wrap; }
+  .hero .breakdown strong { font-variant-numeric: tabular-nums; display: block; font-size: 1rem; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 20px; }
+  .card h2 { font-size: 1.08rem; margin-bottom: 14px; color: var(--primary); }
+  label { display: block; font-size: 0.84rem; color: var(--text-muted); margin-bottom: 5px; }
+  input, select {
+    width: 100%; padding: 10px 11px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font-size: 0.96rem; font-family: inherit;
+  }
+  input:focus, select:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .row { display: grid; gap: 12px; margin-bottom: 12px; }
+  .row.two { grid-template-columns: 1fr 1fr; }
+  .add-company-row { display: flex; gap: 8px; margin-top: 8px; }
+  .add-company-row input { flex: 1; }
+  .btn-small { padding: 9px 13px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: inherit; font-size: 0.86rem; cursor: pointer; white-space: nowrap; }
+  button.primary { width: 100%; padding: 13px; border: none; border-radius: 9px; background: var(--primary); color: var(--primary-text); font-family: inherit; font-size: 0.98rem; font-weight: 600; cursor: pointer; }
+  button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .filters button { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text-muted); font-family: inherit; font-size: 0.85rem; cursor: pointer; }
+  .filters button.active { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
+  .items-block { border: 1px dashed var(--border); border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+  .items-block > label { margin-bottom: 10px; }
+  .item-row { background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 11px; margin-bottom: 10px; }
+  .item-row .type-toggle { display: flex; gap: 8px; margin-bottom: 10px; }
+  .item-row .type-toggle button { flex: 1; padding: 8px; border-radius: 7px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-family: inherit; font-size: 0.86rem; cursor: pointer; }
+  .item-row .type-toggle button.active { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
+  .item-row .item-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .item-row .item-fields input { font-size: 0.9rem; padding: 8px 9px; }
+  .item-row .item-footer { display: flex; justify-content: space-between; align-items: center; font-size: 0.86rem; color: var(--text-muted); }
+  .item-row .item-footer .subtotal { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .item-row .remove-item { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.8rem; }
+  .item-row .remove-item:hover { color: var(--danger); }
+  .add-item-btn { width: 100%; padding: 9px; border-radius: 8px; border: 1px dashed var(--border); background: transparent; color: var(--primary); font-family: inherit; font-size: 0.88rem; cursor: pointer; font-weight: 600; }
+  .total-preview { margin: 4px 0 14px; font-size: 0.92rem; color: var(--text-muted); }
+  .total-preview strong { color: var(--text); font-variant-numeric: tabular-nums; }
+  .trip { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 13px 14px; margin-bottom: 10px; }
+  .trip .trip-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+  .trip .empresa { font-weight: 600; font-size: 0.96rem; }
+  .trip .meta { color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; }
+  .trip .right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+  .status-pill { font-size: 0.76rem; padding: 4px 10px; border-radius: 999px; border: none; cursor: pointer; font-family: inherit; font-weight: 600; }
+  .status-pill.pendiente { background: var(--accent-bg); color: var(--accent); }
+  .status-pill.pagado { background: var(--positive-bg); color: var(--positive); }
+  .del-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.78rem; padding: 2px; }
+  .del-btn:hover { color: var(--danger); }
+  .trip-items { border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px; }
+  .trip-item-line { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 3px 0; }
+  .trip-item-line .desc { color: var(--text-muted); }
+  .trip-item-line .amt { font-variant-numeric: tabular-nums; }
+  .trip .total-line { display: flex; justify-content: space-between; font-weight: 600; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 0.98rem; }
+  .empty-state { color: var(--text-muted); font-size: 0.9rem; padding: 18px 0; text-align: center; }
+  .summary-grid { display: grid; gap: 12px; }
+  .summary-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .summary-card .name { font-weight: 600; margin-bottom: 8px; }
+  .summary-card .stats { display: flex; justify-content: space-between; font-size: 0.86rem; }
+  .summary-card .stats div { text-align: left; }
+  .summary-card .stats span.v { display: block; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 0.98rem; color: var(--text); }
+  .summary-card .stats .pendiente-v { color: var(--accent); }
+  .offline-note { background: var(--accent-bg); color: var(--accent); border-radius: 8px; padding: 10px 12px; font-size: 0.84rem; margin-bottom: 16px; display: none; }
+  .setup-note { background: var(--accent-bg); color: var(--accent); border-radius: 8px; padding: 12px 14px; font-size: 0.86rem; margin-bottom: 16px; display: none; }
+  section { margin-top: 30px; }
+  section > h3 { font-size: 1rem; color: var(--primary); margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="kicker">Registro de despachos</p>
+      <h1>Madera la Reserva</h1>
+    </div>
+    <button class="refresh-btn" id="refreshBtn">Actualizar</button>
+  </header>
+
+  <div id="setupNote" class="setup-note">Todavía falta pegar la URL de tu Apps Script en la línea APPS_SCRIPT_URL del archivo HTML.</div>
+  <div id="offlineNote" class="offline-note">No se pudo conectar con la hoja de cálculo. Revisa la URL o tu conexión y dale a "Actualizar".</div>
+
+  <div class="hero">
+    <div class="label">Saldo pendiente por cobrar</div>
+    <div class="amount" id="heroPendiente">$0</div>
+    <div class="breakdown">
+      <div>Facturado total <strong id="heroFacturado">$0</strong></div>
+      <div>Pagado <strong id="heroPagado">$0</strong></div>
+      <div>Viajes registrados <strong id="heroCount">0</strong></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Registrar viaje</h2>
+    <form id="tripForm">
+      <div class="row two">
+        <div>
+          <label for="fecha">Fecha</label>
+          <input type="date" id="fecha" required>
+        </div>
+        <div>
+          <label for="empresa">Empresa</label>
+          <select id="empresa" required></select>
+        </div>
+      </div>
+      <div class="add-company-row">
+        <input type="text" id="nuevaEmpresa" placeholder="Agregar nueva empresa">
+        <button type="button" class="btn-small" id="addCompanyBtn">Agregar</button>
+      </div>
+
+      <div class="items-block">
+        <label>Madera enviada en este viaje</label>
+        <div id="itemsList"></div>
+        <button type="button" class="add-item-btn" id="addItemBtn">+ Agregar ítem de madera</button>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="notas">Notas (opcional)</label>
+          <input type="text" id="notas" placeholder="Placa del carro, observaciones...">
+        </div>
+      </div>
+
+      <div class="total-preview">Total del viaje: <strong id="totalPreview">$0</strong></div>
+      <button type="submit" class="primary" id="submitBtn">Registrar viaje</button>
+    </form>
+  </div>
+
+  <section>
+    <h3>Viajes despachados</h3>
+    <div class="filters" id="filters"></div>
+    <div id="tripsList"></div>
+  </section>
+
+  <section>
+    <h3>Resumen por empresa</h3>
+    <div class="summary-grid" id="summaryGrid"></div>
+  </section>
+</div>
+
+<script>
+  // Pega aquí la URL de tu Apps Script (termina en /exec)
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzuPshk28_xcW8XdRiTUpEE2cnAz5-f0HOl6Z6LGvDXlQU_13EEhH824p95QpCWGbm7/exec';
+
+  const fmt = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+  const fmtNum = (n) => new Intl.NumberFormat('es-CO').format(n);
+
+  let companies = [];
+  let trips = [];
+  let activeFilter = 'Todas';
+  let itemIdSeq = 0;
+  let formItems = [];
+
+  document.getElementById('fecha').valueAsDate = new Date();
+
+  function showOfflineNote() { document.getElementById('offlineNote').style.display = 'block'; }
+  function hideOfflineNote() { document.getElementById('offlineNote').style.display = 'none'; }
+
+  function urlConfigured() {
+    if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PEGA_AQUI') !== -1) {
+      document.getElementById('setupNote').style.display = 'block';
+      return false;
+    }
+    return true;
+  }
+
+  function groupTrips(rows) {
+    const map = {};
+    rows.forEach(r => {
+      if (!map[r.viajeId]) map[r.viajeId] = { id: r.viajeId, fecha: r.fecha, empresa: r.empresa, notas: r.notas, pagado: r.pagado, items: [] };
+      map[r.viajeId].items.push({ tipo: r.tipo, cantidad: r.cantidad, medida: r.medida, precioUnitario: r.precioUnitario, subtotal: r.subtotal });
+    });
+    return Object.values(map).map(t => ({ ...t, total: t.items.reduce((s, i) => s + (i.subtotal || 0), 0) }))
+      .sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+  }
+
+  async function loadData() {
+    if (!urlConfigured()) return;
+    try {
+      const res = await fetch(APPS_SCRIPT_URL);
+      const data = await res.json();
+      trips = groupTrips(data.trips || []);
+      companies = (data.companies || []).map(nombre => ({ nombre }));
+      hideOfflineNote();
+      renderCompanySelect(); renderFilters(); renderTrips(); renderHero(); renderSummary();
+    } catch (e) { showOfflineNote(); }
+  }
+
+  async function postAction(payload) {
+    if (!urlConfigured()) return false;
+    try {
+      await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+      await loadData();
+      return true;
+    } catch (e) { showOfflineNote(); return false; }
+  }
+
+  document.getElementById('refreshBtn').addEventListener('click', loadData);
+
+  function renderCompanySelect() {
+    const sel = document.getElementById('empresa');
+    const prev = sel.value;
+    sel.innerHTML = '';
+    if (companies.length === 0) {
+      const opt = document.createElement('option');
+      opt.value = ''; opt.textContent = 'Agrega una empresa abajo';
+      sel.appendChild(opt); return;
+    }
+    companies.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.nombre; opt.textContent = c.nombre;
+      sel.appendChild(opt);
+    });
+    if (companies.some(c => c.nombre === prev)) sel.value = prev;
+  }
+
+  document.getElementById('addCompanyBtn').addEventListener('click', async () => {
+    const input = document.getElementById('nuevaEmpresa');
+    const nombre = input.value.trim();
+    if (!nombre) return;
+    if (companies.some(c => c.nombre.toLowerCase() === nombre.toLowerCase())) { input.value = ''; return; }
+    const ok = await postAction({ action: 'addCompany', nombre });
+    if (ok) input.value = '';
+  });
+
+  function addFormItem(tipo) {
+    formItems.push({ uid: ++itemIdSeq, tipo: tipo || 'Rolo', cantidad: '', medida: '', precio: '' });
+    renderItemsList();
+  }
+
+  function renderItemsList() {
+    const wrap = document.getElementById('itemsList');
+    wrap.innerHTML = '';
+    formItems.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'item-row';
+
+      const toggle = document.createElement('div');
+      toggle.className = 'type-toggle';
+      ['Rolo', 'Alfarda'].forEach(t => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.textContent = t;
+        b.className = item.tipo === t ? 'active' : '';
+        b.addEventListener('click', () => { item.tipo = t; renderItemsList(); updateTotalPreview(); });
+        toggle.appendChild(b);
+      });
+      row.appendChild(toggle);
+
+      const fields = document.createElement('div');
+      fields.className = 'item-fields';
+
+      const cantidadWrap = document.createElement('div');
+      const cantidadLabel = document.createElement('label');
+      cantidadLabel.textContent = item.tipo === 'Rolo' ? 'Toneladas' : 'Unidades';
+      const cantidadInput = document.createElement('input');
+      cantidadInput.type = 'number'; cantidadInput.step = item.tipo === 'Rolo' ? '0.01' : '1'; cantidadInput.min = '0';
+      cantidadInput.value = item.cantidad;
+      cantidadInput.addEventListener('input', () => { item.cantidad = cantidadInput.value; updateItemSubtotal(row, item); updateTotalPreview(); });
+      cantidadWrap.appendChild(cantidadLabel); cantidadWrap.appendChild(cantidadInput);
+      fields.appendChild(cantidadWrap);
+
+      const precioWrap = document.createElement('div');
+      const precioLabel = document.createElement('label');
+      precioLabel.textContent = item.tipo === 'Rolo' ? 'Precio por tonelada' : 'Precio por unidad';
+      const precioInput = document.createElement('input');
+      precioInput.type = 'number'; precioInput.step = '100'; precioInput.min = '0';
+      precioInput.value = item.precio;
+      precioInput.addEventListener('input', () => { item.precio = precioInput.value; updateItemSubtotal(row, item); updateTotalPreview(); });
+      precioWrap.appendChild(precioLabel); precioWrap.appendChild(precioInput);
+      fields.appendChild(precioWrap);
+
+      row.appendChild(fields);
+
+      if (item.tipo === 'Alfarda') {
+        const medidaWrap = document.createElement('div');
+        medidaWrap.style.marginBottom = '8px';
+        const medidaLabel = document.createElement('label');
+        medidaLabel.textContent = 'Medida de la unidad';
+        const medidaInput = document.createElement('input');
+        medidaInput.type = 'text'; medidaInput.placeholder = 'Ej: 3m x 4 pulg';
+        medidaInput.value = item.medida;
+        medidaInput.addEventListener('input', () => { item.medida = medidaInput.value; });
+        medidaWrap.appendChild(medidaLabel); medidaWrap.appendChild(medidaInput);
+        row.appendChild(medidaWrap);
+      }
+
+      const footer = document.createElement('div');
+      footer.className = 'item-footer';
+      const subtotalSpan = document.createElement('span');
+      subtotalSpan.className = 'subtotal'; subtotalSpan.textContent = fmt.format(0);
+      footer.appendChild(subtotalSpan);
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button'; removeBtn.className = 'remove-item'; removeBtn.textContent = 'Quitar ítem';
+      removeBtn.addEventListener('click', () => { formItems = formItems.filter(i => i.uid !== item.uid); renderItemsList(); updateTotalPreview(); });
+      footer.appendChild(removeBtn);
+      row.appendChild(footer);
+
+      updateItemSubtotal(row, item);
+      wrap.appendChild(row);
+    });
+  }
+
+  function updateItemSubtotal(row, item) {
+    const cantidad = parseFloat(item.cantidad) || 0;
+    const precio = parseFloat(item.precio) || 0;
+    const span = row.querySelector('.subtotal');
+    if (span) span.textContent = fmt.format(cantidad * precio);
+  }
+
+  function updateTotalPreview() {
+    const total = formItems.reduce((s, i) => s + (parseFloat(i.cantidad) || 0) * (parseFloat(i.precio) || 0), 0);
+    document.getElementById('totalPreview').textContent = fmt.format(total);
+  }
+
+  document.getElementById('addItemBtn').addEventListener('click', () => addFormItem('Rolo'));
+  addFormItem('Rolo');
+
+  document.getElementById('tripForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const empresa = document.getElementById('empresa').value;
+    if (!empresa) return;
+
+    const items = formItems.map(i => {
+      const cantidad = parseFloat(i.cantidad) || 0;
+      const precio = parseFloat(i.precio) || 0;
+      return { tipo: i.tipo, cantidad, medida: i.tipo === 'Alfarda' ? (i.medida || '').trim() : null, precioUnitario: precio, subtotal: cantidad * precio };
+    }).filter(i => i.cantidad > 0 && i.precioUnitario > 0);
+
+    if (items.length === 0) return;
+
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+
+    const ok = await postAction({
+      action: 'addTrip',
+      fecha: document.getElementById('fecha').value,
+      empresa,
+      items,
+      notas: document.getElementById('notas').value.trim()
+    });
+
+    if (ok) {
+      document.getElementById('tripForm').reset();
+      document.getElementById('fecha').valueAsDate = new Date();
+      formItems = []; addFormItem('Rolo'); updateTotalPreview();
+    }
+    submitBtn.disabled = false;
+  });
+
+  function renderFilters() {
+    const wrap = document.getElementById('filters');
+    wrap.innerHTML = '';
+    const names = ['Todas', ...companies.map(c => c.nombre)];
+    names.forEach(name => {
+      const btn = document.createElement('button');
+      btn.textContent = name;
+      btn.className = activeFilter === name ? 'active' : '';
+      btn.addEventListener('click', () => { activeFilter = name; renderFilters(); renderTrips(); });
+      wrap.appendChild(btn);
+    });
+  }
+
+  function describeItem(it) {
+    if (it.tipo === 'Rolo') return `Rolo · ${fmtNum(it.cantidad)} ton · ${fmt.format(it.precioUnitario)}/ton`;
+    const medida = it.medida ? ` (${it.medida})` : '';
+    return `Alfarda · ${fmtNum(it.cantidad)} unid${medida} · ${fmt.format(it.precioUnitario)}/unid`;
+  }
+
+  function renderTrips() {
+    const list = document.getElementById('tripsList');
+    list.innerHTML = '';
+    const filtered = activeFilter === 'Todas' ? trips : trips.filter(t => t.empresa === activeFilter);
+    if (filtered.length === 0) { list.innerHTML = '<div class="empty-state">Aún no hay viajes registrados aquí.</div>'; return; }
+
+    filtered.forEach(t => {
+      const row = document.createElement('div');
+      row.className = 'trip';
+      const fechaFmt = t.fecha ? new Date(t.fecha + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+
+      const head = document.createElement('div');
+      head.className = 'trip-head';
+      const left = document.createElement('div');
+      left.innerHTML = `<div class="empresa">${t.empresa}</div><div class="meta">${fechaFmt}${t.notas ? ' · ' + t.notas : ''}</div>`;
+      const right = document.createElement('div');
+      right.className = 'right';
+      const pill = document.createElement('button');
+      pill.className = 'status-pill ' + (t.pagado ? 'pagado' : 'pendiente');
+      pill.textContent = t.pagado ? 'Pagado' : 'Pendiente';
+      pill.addEventListener('click', () => postAction({ action: 'togglePagado', viajeId: t.id, pagado: !t.pagado }));
+      const del = document.createElement('button');
+      del.className = 'del-btn'; del.textContent = 'Eliminar';
+      del.addEventListener('click', () => { if (confirm('¿Eliminar este viaje?')) postAction({ action: 'deleteTrip', viajeId: t.id }); });
+      right.appendChild(pill); right.appendChild(del);
+      head.appendChild(left); head.appendChild(right);
+      row.appendChild(head);
+
+      const itemsWrap = document.createElement('div');
+      itemsWrap.className = 'trip-items';
+      (t.items || []).forEach(it => {
+        const line = document.createElement('div');
+        line.className = 'trip-item-line';
+        line.innerHTML = `<span class="desc">${describeItem(it)}</span><span class="amt">${fmt.format(it.subtotal)}</span>`;
+        itemsWrap.appendChild(line);
+      });
+      row.appendChild(itemsWrap);
+
+      const totalLine = document.createElement('div');
+      totalLine.className = 'total-line';
+      totalLine.innerHTML = `<span>Total del viaje</span><span>${fmt.format(t.total)}</span>`;
+      row.appendChild(totalLine);
+
+      list.appendChild(row);
+    });
+  }
+
+  function renderHero() {
+    const facturado = trips.reduce((s, t) => s + (t.total || 0), 0);
+    const pagado = trips.filter(t => t.pagado).reduce((s, t) => s + (t.total || 0), 0);
+    document.getElementById('heroFacturado').textContent = fmt.format(facturado);
+    document.getElementById('heroPagado').textContent = fmt.format(pagado);
+    document.getElementById('heroPendiente').textContent = fmt.format(facturado - pagado);
+    document.getElementById('heroCount').textContent = fmtNum(trips.length);
+  }
+
+  function renderSummary() {
+    const grid = document.getElementById('summaryGrid');
+    grid.innerHTML = '';
+    if (companies.length === 0) { grid.innerHTML = '<div class="empty-state">Agrega empresas para ver el resumen.</div>'; return; }
+    companies.forEach(c => {
+      const ts = trips.filter(t => t.empresa === c.nombre);
+      const facturado = ts.reduce((s, t) => s + (t.total || 0), 0);
+      const pagado = ts.filter(t => t.pagado).reduce((s, t) => s + (t.total || 0), 0);
+      const card = document.createElement('div');
+      card.className = 'summary-card';
+      card.innerHTML = `<div class="name">${c.nombre}</div><div class="stats">
+        <div>Facturado<span class="v">${fmt.format(facturado)}</span></div>
+        <div>Pagado<span class="v">${fmt.format(pagado)}</span></div>
+        <div>Pendiente<span class="v pendiente-v">${fmt.format(facturado - pagado)}</span></div></div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  urlConfigured();
+  loadData();
+</script>
+</body>
+</html>
