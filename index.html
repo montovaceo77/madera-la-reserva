@@ -250,15 +250,22 @@
       companies = (data.companies || []).map(nombre => ({ nombre }));
       payments = (data.payments || []).slice().sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
       hideOfflineNote();
-      renderCompanySelects(); renderFilters(); renderTrips(); renderPayments(); renderHero(); renderSummary();
+      renderAll();
     } catch (e) { showOfflineNote(); }
   }
 
-  async function postAction(payload) {
+  function renderAll() {
+    renderCompanySelects(); renderFilters(); renderTrips(); renderPayments(); renderHero(); renderSummary();
+  }
+
+  async function postAction(payload, applyLocal) {
     if (!urlConfigured()) return false;
     try {
-      await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
-      await loadData();
+      const res = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+      const data = await res.json().catch(() => ({}));
+      hideOfflineNote();
+      if (applyLocal) applyLocal(data);
+      renderAll();
       return true;
     } catch (e) { showOfflineNote(); return false; }
   }
@@ -292,7 +299,9 @@
     const nombre = input.value.trim();
     if (!nombre) return;
     if (companies.some(c => c.nombre.toLowerCase() === nombre.toLowerCase())) { input.value = ''; return; }
-    const ok = await postAction({ action: 'addCompany', nombre });
+    const ok = await postAction({ action: 'addCompany', nombre }, () => {
+      companies.push({ nombre });
+    });
     if (ok) input.value = '';
   });
 
@@ -443,7 +452,18 @@
     };
     if (editingTripId) payload.viajeId = editingTripId;
 
-    const ok = await postAction(payload);
+    const wasEditing = editingTripId;
+    const ok = await postAction(payload, (data) => {
+      const total = items.reduce((s, i) => s + i.subtotal, 0);
+      const tripObj = { id: wasEditing || data.viajeId, fecha: payload.fecha, empresa, notas: payload.notas, items, total };
+      if (wasEditing) {
+        const idx = trips.findIndex(t => t.id === wasEditing);
+        if (idx > -1) trips[idx] = tripObj; else trips.unshift(tripObj);
+      } else {
+        trips.unshift(tripObj);
+      }
+      trips.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+    });
     if (ok) resetTripForm();
     submitBtn.disabled = false;
   });
@@ -463,6 +483,9 @@
       empresa,
       monto,
       notas: document.getElementById('pagoNotas').value.trim()
+    }, (data) => {
+      payments.unshift({ pagoId: data.pagoId, fecha: document.getElementById('pagoFecha').value, empresa, monto, notas: document.getElementById('pagoNotas').value.trim() });
+      payments.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
     });
 
     if (ok) {
@@ -515,7 +538,7 @@
       edit.addEventListener('click', () => startEditTrip(t));
       const del = document.createElement('button');
       del.className = 'del-btn'; del.textContent = 'Eliminar';
-      del.addEventListener('click', () => { if (confirm('¿Eliminar este viaje?')) postAction({ action: 'deleteTrip', viajeId: t.id }); });
+      del.addEventListener('click', () => { if (confirm('¿Eliminar este viaje?')) postAction({ action: 'deleteTrip', viajeId: t.id }, () => { trips = trips.filter(x => x.id !== t.id); }); });
       btnGroup.appendChild(edit); btnGroup.appendChild(del);
       head.appendChild(left); head.appendChild(btnGroup);
       row.appendChild(head);
@@ -553,7 +576,7 @@
       left.innerHTML = `<div class="empresa">${p.empresa}</div><div class="meta">${fechaFmt}${p.notas ? ' · ' + p.notas : ''}</div><div class="monto">${fmt.format(p.monto)}</div>`;
       const del = document.createElement('button');
       del.className = 'del-btn'; del.textContent = 'Eliminar';
-      del.addEventListener('click', () => { if (confirm('¿Eliminar este pago?')) postAction({ action: 'deletePayment', pagoId: p.pagoId }); });
+      del.addEventListener('click', () => { if (confirm('¿Eliminar este pago?')) postAction({ action: 'deletePayment', pagoId: p.pagoId }, () => { payments = payments.filter(x => x.pagoId !== p.pagoId); }); });
       row.appendChild(left); row.appendChild(del);
       list.appendChild(row);
     });
