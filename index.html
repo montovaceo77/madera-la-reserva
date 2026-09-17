@@ -144,10 +144,21 @@
           <label for="flete">Flete (opcional)</label>
           <input type="number" id="flete" step="any" min="0" placeholder="0">
         </div>
-        <div>
-          <label for="costoCorte">Costo de corte (opcional)</label>
-          <input type="number" id="costoCorte" step="any" min="0" placeholder="0">
+        <div></div>
+      </div>
+      <div class="items-block" style="border-style: solid;">
+        <label>Costo de corte (se paga por tonelada, sea Rolo o Alfarda)</label>
+        <div class="row two">
+          <div>
+            <label for="corteToneladas">Toneladas totales del viaje</label>
+            <input type="number" id="corteToneladas" step="any" min="0" placeholder="0">
+          </div>
+          <div>
+            <label for="cortePrecioTon">Precio de corte por tonelada</label>
+            <input type="number" id="cortePrecioTon" step="any" min="0" placeholder="0">
+          </div>
         </div>
+        <div class="total-preview" style="margin-bottom:0;">Costo de corte: <strong id="corteTotalPreview">$0</strong></div>
       </div>
 
       <div class="row">
@@ -250,7 +261,7 @@
   function groupTrips(rows) {
     const map = {};
     rows.forEach(r => {
-      if (!map[r.viajeId]) map[r.viajeId] = { id: r.viajeId, fecha: r.fecha, empresa: r.empresa, notas: r.notas, flete: parseFloat(r.flete) || 0, costoCorte: parseFloat(r.costoCorte) || 0, items: [] };
+      if (!map[r.viajeId]) map[r.viajeId] = { id: r.viajeId, fecha: r.fecha, empresa: r.empresa, notas: r.notas, flete: parseFloat(r.flete) || 0, corteToneladas: parseFloat(r.corteToneladas) || 0, cortePrecioTon: parseFloat(r.cortePrecioTon) || 0, costoCorte: parseFloat(r.costoCorte) || 0, items: [] };
       map[r.viajeId].items.push({ tipo: r.tipo, cantidad: r.cantidad, medida: r.medida, precioUnitario: r.precioUnitario, subtotal: r.subtotal });
     });
     return Object.values(map).map(t => {
@@ -415,11 +426,22 @@
   document.getElementById('addItemBtn').addEventListener('click', () => addFormItem('Rolo'));
   addFormItem('Rolo');
 
+  ['corteToneladas', 'cortePrecioTon'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateCorteTotalPreview);
+  });
+  function updateCorteTotalPreview() {
+    const ton = parseFloat(document.getElementById('corteToneladas').value) || 0;
+    const precio = parseFloat(document.getElementById('cortePrecioTon').value) || 0;
+    document.getElementById('corteTotalPreview').textContent = fmt.format(ton * precio);
+  }
+
   function resetTripForm() {
     document.getElementById('tripForm').reset();
     document.getElementById('fecha').valueAsDate = new Date();
     document.getElementById('flete').value = '';
-    document.getElementById('costoCorte').value = '';
+    document.getElementById('corteToneladas').value = '';
+    document.getElementById('cortePrecioTon').value = '';
+    updateCorteTotalPreview();
     formItems = []; addFormItem('Rolo'); updateTotalPreview();
     editingTripId = null;
     document.getElementById('submitBtn').textContent = 'Registrar viaje';
@@ -431,7 +453,9 @@
     document.getElementById('fecha').value = t.fecha;
     document.getElementById('notas').value = t.notas || '';
     document.getElementById('flete').value = t.flete || '';
-    document.getElementById('costoCorte').value = t.costoCorte || '';
+    document.getElementById('corteToneladas').value = t.corteToneladas || '';
+    document.getElementById('cortePrecioTon').value = t.cortePrecioTon || '';
+    updateCorteTotalPreview();
     formItems = (t.items || []).map(it => ({
       uid: ++itemIdSeq, tipo: it.tipo,
       cantidad: it.cantidad != null ? String(it.cantidad) : '',
@@ -466,7 +490,9 @@
     submitBtn.disabled = true;
 
     const flete = parseFloat(document.getElementById('flete').value) || 0;
-    const costoCorte = parseFloat(document.getElementById('costoCorte').value) || 0;
+    const corteToneladas = parseFloat(document.getElementById('corteToneladas').value) || 0;
+    const cortePrecioTon = parseFloat(document.getElementById('cortePrecioTon').value) || 0;
+    const costoCorte = corteToneladas * cortePrecioTon;
 
     const payload = {
       action: editingTripId ? 'updateTrip' : 'addTrip',
@@ -474,6 +500,8 @@
       empresa,
       items,
       flete,
+      corteToneladas,
+      cortePrecioTon,
       costoCorte,
       notas: document.getElementById('notas').value.trim()
     };
@@ -482,7 +510,7 @@
     const wasEditing = editingTripId;
     const ok = await postAction(payload, (data) => {
       const total = items.reduce((s, i) => s + i.subtotal, 0);
-      const tripObj = { id: wasEditing || data.viajeId, fecha: payload.fecha, empresa, notas: payload.notas, items, flete, costoCorte, total, neto: total - flete - costoCorte };
+      const tripObj = { id: wasEditing || data.viajeId, fecha: payload.fecha, empresa, notas: payload.notas, items, flete, corteToneladas, cortePrecioTon, costoCorte, total, neto: total - flete - costoCorte };
       if (wasEditing) {
         const idx = trips.findIndex(t => t.id === wasEditing);
         if (idx > -1) trips[idx] = tripObj; else trips.unshift(tripObj);
@@ -588,7 +616,8 @@
       if (t.flete || t.costoCorte) {
         const costLine = document.createElement('div');
         costLine.className = 'trip-item-line';
-        costLine.innerHTML = `<span class="desc">Flete ${fmt.format(t.flete)} · Corte ${fmt.format(t.costoCorte)}</span>`;
+        const corteTxt = t.costoCorte ? `Corte ${fmtNum(t.corteToneladas)} ton × ${fmt.format(t.cortePrecioTon)} = ${fmt.format(t.costoCorte)}` : '';
+        costLine.innerHTML = `<span class="desc">${t.flete ? 'Flete ' + fmt.format(t.flete) : ''}${t.flete && corteTxt ? ' · ' : ''}${corteTxt}</span>`;
         row.appendChild(costLine);
       }
       const netoLine = document.createElement('div');
