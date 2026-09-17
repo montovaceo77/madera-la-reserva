@@ -41,6 +41,7 @@
   .btn-small { padding: 9px 13px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: inherit; font-size: 0.86rem; cursor: pointer; white-space: nowrap; }
   button.primary { width: 100%; padding: 13px; border: none; border-radius: 9px; background: var(--primary); color: var(--primary-text); font-family: inherit; font-size: 0.98rem; font-weight: 600; cursor: pointer; }
   button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.secondary { width: 100%; padding: 13px; border: 1px solid var(--primary); border-radius: 9px; background: transparent; color: var(--primary); font-family: inherit; font-size: 0.98rem; font-weight: 600; cursor: pointer; }
   .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
   .filters button { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--text-muted); font-family: inherit; font-size: 0.85rem; cursor: pointer; }
   .filters button.active { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
@@ -54,6 +55,8 @@
   .item-row .item-fields input { font-size: 0.9rem; padding: 8px 9px; }
   .item-row .item-footer { display: flex; justify-content: space-between; align-items: center; font-size: 0.86rem; color: var(--text-muted); }
   .item-row .item-footer .subtotal { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .pending-badge { display: inline-block; background: var(--accent-bg); color: var(--accent); font-size: 0.74rem; padding: 3px 8px; border-radius: 999px; font-weight: 600; margin-left: 6px; }
+  .cancel-edit-btn { width: 100%; padding: 10px; margin-top: 8px; border: none; background: none; color: var(--text-muted); font-family: inherit; font-size: 0.86rem; cursor: pointer; }
   .item-row .remove-item { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.8rem; }
   .item-row .remove-item:hover { color: var(--danger); }
   .add-item-btn { width: 100%; padding: 9px; border-radius: 8px; border: 1px dashed var(--border); background: transparent; color: var(--primary); font-family: inherit; font-size: 0.88rem; cursor: pointer; font-weight: 600; }
@@ -63,17 +66,17 @@
   .trip .trip-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
   .trip .empresa { font-weight: 600; font-size: 0.96rem; }
   .trip .meta { color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; }
-  .trip .right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
-  .status-pill { font-size: 0.76rem; padding: 4px 10px; border-radius: 999px; border: none; cursor: pointer; font-family: inherit; font-weight: 600; }
-  .status-pill.pendiente { background: var(--accent-bg); color: var(--accent); }
-  .status-pill.pagado { background: var(--positive-bg); color: var(--positive); }
-  .del-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.78rem; padding: 2px; }
+  .del-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.78rem; padding: 2px; flex-shrink: 0; }
   .del-btn:hover { color: var(--danger); }
   .trip-items { border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px; }
   .trip-item-line { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 3px 0; }
   .trip-item-line .desc { color: var(--text-muted); }
   .trip-item-line .amt { font-variant-numeric: tabular-nums; }
   .trip .total-line { display: flex; justify-content: space-between; font-weight: 600; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 0.98rem; }
+  .payment { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .payment .empresa { font-weight: 600; font-size: 0.94rem; }
+  .payment .meta { color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; }
+  .payment .monto { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--positive); font-size: 0.98rem; margin-top: 4px; }
   .empty-state { color: var(--text-muted); font-size: 0.9rem; padding: 18px 0; text-align: center; }
   .summary-grid { display: grid; gap: 12px; }
   .summary-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
@@ -108,6 +111,7 @@
       <div>Facturado total <strong id="heroFacturado">$0</strong></div>
       <div>Pagado <strong id="heroPagado">$0</strong></div>
       <div>Viajes registrados <strong id="heroCount">0</strong></div>
+      <div>Con precio pendiente <strong id="heroPendientePrecio">0</strong></div>
     </div>
   </div>
 
@@ -144,13 +148,52 @@
 
       <div class="total-preview">Total del viaje: <strong id="totalPreview">$0</strong></div>
       <button type="submit" class="primary" id="submitBtn">Registrar viaje</button>
+      <button type="button" class="cancel-edit-btn" id="cancelEditBtn" style="display:none;">Cancelar edición</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Registrar pago</h2>
+    <form id="paymentForm">
+      <div class="row two">
+        <div>
+          <label for="pagoFecha">Fecha</label>
+          <input type="date" id="pagoFecha" required>
+        </div>
+        <div>
+          <label for="pagoEmpresa">Empresa</label>
+          <select id="pagoEmpresa" required></select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="pagoMonto">Monto recibido</label>
+          <input type="number" id="pagoMonto" step="100" min="0" required placeholder="Puede cubrir uno o varios viajes">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="pagoNotas">Notas (opcional)</label>
+          <input type="text" id="pagoNotas" placeholder="A qué viajes corresponde, forma de pago...">
+        </div>
+      </div>
+      <button type="submit" class="secondary" id="paymentSubmitBtn">Registrar pago</button>
     </form>
   </div>
 
   <section>
-    <h3>Viajes despachados</h3>
+    <h3>Viajes y pagos</h3>
     <div class="filters" id="filters"></div>
+  </section>
+
+  <section style="margin-top: 16px;">
+    <h3>Viajes despachados</h3>
     <div id="tripsList"></div>
+  </section>
+
+  <section>
+    <h3>Pagos recibidos</h3>
+    <div id="paymentsList"></div>
   </section>
 
   <section>
@@ -168,11 +211,14 @@
 
   let companies = [];
   let trips = [];
+  let payments = [];
   let activeFilter = 'Todas';
   let itemIdSeq = 0;
   let formItems = [];
+  let editingTripId = null;
 
   document.getElementById('fecha').valueAsDate = new Date();
+  document.getElementById('pagoFecha').valueAsDate = new Date();
 
   function showOfflineNote() { document.getElementById('offlineNote').style.display = 'block'; }
   function hideOfflineNote() { document.getElementById('offlineNote').style.display = 'none'; }
@@ -188,7 +234,7 @@
   function groupTrips(rows) {
     const map = {};
     rows.forEach(r => {
-      if (!map[r.viajeId]) map[r.viajeId] = { id: r.viajeId, fecha: r.fecha, empresa: r.empresa, notas: r.notas, pagado: r.pagado, items: [] };
+      if (!map[r.viajeId]) map[r.viajeId] = { id: r.viajeId, fecha: r.fecha, empresa: r.empresa, notas: r.notas, items: [] };
       map[r.viajeId].items.push({ tipo: r.tipo, cantidad: r.cantidad, medida: r.medida, precioUnitario: r.precioUnitario, subtotal: r.subtotal });
     });
     return Object.values(map).map(t => ({ ...t, total: t.items.reduce((s, i) => s + (i.subtotal || 0), 0) }))
@@ -202,8 +248,9 @@
       const data = await res.json();
       trips = groupTrips(data.trips || []);
       companies = (data.companies || []).map(nombre => ({ nombre }));
+      payments = (data.payments || []).slice().sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
       hideOfflineNote();
-      renderCompanySelect(); renderFilters(); renderTrips(); renderHero(); renderSummary();
+      renderCompanySelects(); renderFilters(); renderTrips(); renderPayments(); renderHero(); renderSummary();
     } catch (e) { showOfflineNote(); }
   }
 
@@ -218,9 +265,7 @@
 
   document.getElementById('refreshBtn').addEventListener('click', loadData);
 
-  function renderCompanySelect() {
-    const sel = document.getElementById('empresa');
-    const prev = sel.value;
+  function fillSelect(sel, prev) {
     sel.innerHTML = '';
     if (companies.length === 0) {
       const opt = document.createElement('option');
@@ -233,6 +278,13 @@
       sel.appendChild(opt);
     });
     if (companies.some(c => c.nombre === prev)) sel.value = prev;
+  }
+
+  function renderCompanySelects() {
+    const sel1 = document.getElementById('empresa');
+    const sel2 = document.getElementById('pagoEmpresa');
+    fillSelect(sel1, sel1.value);
+    fillSelect(sel2, sel2.value);
   }
 
   document.getElementById('addCompanyBtn').addEventListener('click', async () => {
@@ -282,9 +334,9 @@
 
       const precioWrap = document.createElement('div');
       const precioLabel = document.createElement('label');
-      precioLabel.textContent = item.tipo === 'Rolo' ? 'Precio por tonelada' : 'Precio por unidad';
+      precioLabel.textContent = (item.tipo === 'Rolo' ? 'Precio por tonelada' : 'Precio por unidad') + ' (opcional si aún no lo sabes)';
       const precioInput = document.createElement('input');
-      precioInput.type = 'number'; precioInput.step = '100'; precioInput.min = '0';
+      precioInput.type = 'number'; precioInput.step = '100'; precioInput.min = '0'; precioInput.placeholder = 'Pendiente';
       precioInput.value = item.precio;
       precioInput.addEventListener('input', () => { item.precio = precioInput.value; updateItemSubtotal(row, item); updateTotalPreview(); });
       precioWrap.appendChild(precioLabel); precioWrap.appendChild(precioInput);
@@ -336,6 +388,36 @@
   document.getElementById('addItemBtn').addEventListener('click', () => addFormItem('Rolo'));
   addFormItem('Rolo');
 
+  function resetTripForm() {
+    document.getElementById('tripForm').reset();
+    document.getElementById('fecha').valueAsDate = new Date();
+    formItems = []; addFormItem('Rolo'); updateTotalPreview();
+    editingTripId = null;
+    document.getElementById('submitBtn').textContent = 'Registrar viaje';
+    document.getElementById('cancelEditBtn').style.display = 'none';
+  }
+
+  function startEditTrip(t) {
+    editingTripId = t.id;
+    document.getElementById('fecha').value = t.fecha;
+    document.getElementById('notas').value = t.notas || '';
+    formItems = (t.items || []).map(it => ({
+      uid: ++itemIdSeq, tipo: it.tipo,
+      cantidad: it.cantidad != null ? String(it.cantidad) : '',
+      medida: it.medida || '',
+      precio: it.precioUnitario ? String(it.precioUnitario) : ''
+    }));
+    renderItemsList();
+    updateTotalPreview();
+    document.getElementById('submitBtn').textContent = 'Guardar cambios';
+    document.getElementById('cancelEditBtn').style.display = 'block';
+    const sel = document.getElementById('empresa');
+    if (companies.some(c => c.nombre === t.empresa)) sel.value = t.empresa;
+    document.getElementById('tripForm').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  document.getElementById('cancelEditBtn').addEventListener('click', resetTripForm);
+
   document.getElementById('tripForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const empresa = document.getElementById('empresa').value;
@@ -345,27 +427,49 @@
       const cantidad = parseFloat(i.cantidad) || 0;
       const precio = parseFloat(i.precio) || 0;
       return { tipo: i.tipo, cantidad, medida: i.tipo === 'Alfarda' ? (i.medida || '').trim() : null, precioUnitario: precio, subtotal: cantidad * precio };
-    }).filter(i => i.cantidad > 0 && i.precioUnitario > 0);
+    }).filter(i => i.cantidad > 0);
 
     if (items.length === 0) return;
 
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
 
-    const ok = await postAction({
-      action: 'addTrip',
+    const payload = {
+      action: editingTripId ? 'updateTrip' : 'addTrip',
       fecha: document.getElementById('fecha').value,
       empresa,
       items,
       notas: document.getElementById('notas').value.trim()
+    };
+    if (editingTripId) payload.viajeId = editingTripId;
+
+    const ok = await postAction(payload);
+    if (ok) resetTripForm();
+    submitBtn.disabled = false;
+  });
+
+  document.getElementById('paymentForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const empresa = document.getElementById('pagoEmpresa').value;
+    const monto = parseFloat(document.getElementById('pagoMonto').value) || 0;
+    if (!empresa || monto <= 0) return;
+
+    const btn = document.getElementById('paymentSubmitBtn');
+    btn.disabled = true;
+
+    const ok = await postAction({
+      action: 'addPayment',
+      fecha: document.getElementById('pagoFecha').value,
+      empresa,
+      monto,
+      notas: document.getElementById('pagoNotas').value.trim()
     });
 
     if (ok) {
-      document.getElementById('tripForm').reset();
-      document.getElementById('fecha').valueAsDate = new Date();
-      formItems = []; addFormItem('Rolo'); updateTotalPreview();
+      document.getElementById('paymentForm').reset();
+      document.getElementById('pagoFecha').valueAsDate = new Date();
     }
-    submitBtn.disabled = false;
+    btn.disabled = false;
   });
 
   function renderFilters() {
@@ -376,15 +480,16 @@
       const btn = document.createElement('button');
       btn.textContent = name;
       btn.className = activeFilter === name ? 'active' : '';
-      btn.addEventListener('click', () => { activeFilter = name; renderFilters(); renderTrips(); });
+      btn.addEventListener('click', () => { activeFilter = name; renderFilters(); renderTrips(); renderPayments(); });
       wrap.appendChild(btn);
     });
   }
 
   function describeItem(it) {
-    if (it.tipo === 'Rolo') return `Rolo · ${fmtNum(it.cantidad)} ton · ${fmt.format(it.precioUnitario)}/ton`;
+    const precioTxt = it.precioUnitario ? fmt.format(it.precioUnitario) : 'precio pendiente';
+    if (it.tipo === 'Rolo') return `Rolo · ${fmtNum(it.cantidad)} ton · ${precioTxt}${it.precioUnitario ? '/ton' : ''}`;
     const medida = it.medida ? ` (${it.medida})` : '';
-    return `Alfarda · ${fmtNum(it.cantidad)} unid${medida} · ${fmt.format(it.precioUnitario)}/unid`;
+    return `Alfarda · ${fmtNum(it.cantidad)} unid${medida} · ${precioTxt}${it.precioUnitario ? '/unid' : ''}`;
   }
 
   function renderTrips() {
@@ -400,19 +505,19 @@
 
       const head = document.createElement('div');
       head.className = 'trip-head';
+      const hasPending = (t.items || []).some(it => !it.precioUnitario);
       const left = document.createElement('div');
-      left.innerHTML = `<div class="empresa">${t.empresa}</div><div class="meta">${fechaFmt}${t.notas ? ' · ' + t.notas : ''}</div>`;
-      const right = document.createElement('div');
-      right.className = 'right';
-      const pill = document.createElement('button');
-      pill.className = 'status-pill ' + (t.pagado ? 'pagado' : 'pendiente');
-      pill.textContent = t.pagado ? 'Pagado' : 'Pendiente';
-      pill.addEventListener('click', () => postAction({ action: 'togglePagado', viajeId: t.id, pagado: !t.pagado }));
+      left.innerHTML = `<div class="empresa">${t.empresa}${hasPending ? '<span class="pending-badge">Precio pendiente</span>' : ''}</div><div class="meta">${fechaFmt}${t.notas ? ' · ' + t.notas : ''}</div>`;
+      const btnGroup = document.createElement('div');
+      btnGroup.style.display = 'flex'; btnGroup.style.gap = '10px'; btnGroup.style.flexShrink = '0';
+      const edit = document.createElement('button');
+      edit.className = 'del-btn'; edit.textContent = 'Editar';
+      edit.addEventListener('click', () => startEditTrip(t));
       const del = document.createElement('button');
       del.className = 'del-btn'; del.textContent = 'Eliminar';
       del.addEventListener('click', () => { if (confirm('¿Eliminar este viaje?')) postAction({ action: 'deleteTrip', viajeId: t.id }); });
-      right.appendChild(pill); right.appendChild(del);
-      head.appendChild(left); head.appendChild(right);
+      btnGroup.appendChild(edit); btnGroup.appendChild(del);
+      head.appendChild(left); head.appendChild(btnGroup);
       row.appendChild(head);
 
       const itemsWrap = document.createElement('div');
@@ -434,13 +539,35 @@
     });
   }
 
+  function renderPayments() {
+    const list = document.getElementById('paymentsList');
+    list.innerHTML = '';
+    const filtered = activeFilter === 'Todas' ? payments : payments.filter(p => p.empresa === activeFilter);
+    if (filtered.length === 0) { list.innerHTML = '<div class="empty-state">Aún no hay pagos registrados aquí.</div>'; return; }
+
+    filtered.forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'payment';
+      const fechaFmt = p.fecha ? new Date(p.fecha + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+      const left = document.createElement('div');
+      left.innerHTML = `<div class="empresa">${p.empresa}</div><div class="meta">${fechaFmt}${p.notas ? ' · ' + p.notas : ''}</div><div class="monto">${fmt.format(p.monto)}</div>`;
+      const del = document.createElement('button');
+      del.className = 'del-btn'; del.textContent = 'Eliminar';
+      del.addEventListener('click', () => { if (confirm('¿Eliminar este pago?')) postAction({ action: 'deletePayment', pagoId: p.pagoId }); });
+      row.appendChild(left); row.appendChild(del);
+      list.appendChild(row);
+    });
+  }
+
   function renderHero() {
     const facturado = trips.reduce((s, t) => s + (t.total || 0), 0);
-    const pagado = trips.filter(t => t.pagado).reduce((s, t) => s + (t.total || 0), 0);
+    const pagado = payments.reduce((s, p) => s + (p.monto || 0), 0);
     document.getElementById('heroFacturado').textContent = fmt.format(facturado);
     document.getElementById('heroPagado').textContent = fmt.format(pagado);
     document.getElementById('heroPendiente').textContent = fmt.format(facturado - pagado);
     document.getElementById('heroCount').textContent = fmtNum(trips.length);
+    const pendingPriceCount = trips.filter(t => (t.items || []).some(it => !it.precioUnitario)).length;
+    document.getElementById('heroPendientePrecio').textContent = fmtNum(pendingPriceCount);
   }
 
   function renderSummary() {
@@ -448,9 +575,8 @@
     grid.innerHTML = '';
     if (companies.length === 0) { grid.innerHTML = '<div class="empty-state">Agrega empresas para ver el resumen.</div>'; return; }
     companies.forEach(c => {
-      const ts = trips.filter(t => t.empresa === c.nombre);
-      const facturado = ts.reduce((s, t) => s + (t.total || 0), 0);
-      const pagado = ts.filter(t => t.pagado).reduce((s, t) => s + (t.total || 0), 0);
+      const facturado = trips.filter(t => t.empresa === c.nombre).reduce((s, t) => s + (t.total || 0), 0);
+      const pagado = payments.filter(p => p.empresa === c.nombre).reduce((s, p) => s + (p.monto || 0), 0);
       const card = document.createElement('div');
       card.className = 'summary-card';
       card.innerHTML = `<div class="name">${c.nombre}</div><div class="stats">
