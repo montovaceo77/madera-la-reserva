@@ -55,7 +55,12 @@
   .item-row .item-fields input { font-size: 0.9rem; padding: 8px 9px; }
   .item-row .item-footer { display: flex; justify-content: space-between; align-items: center; font-size: 0.86rem; color: var(--text-muted); }
   .item-row .item-footer .subtotal { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .trip.status-pagado { border-left: 4px solid var(--positive); }
+  .trip.status-parcial { border-left: 4px solid var(--accent); }
   .pending-badge { display: inline-block; background: var(--accent-bg); color: var(--accent); font-size: 0.74rem; padding: 3px 8px; border-radius: 999px; font-weight: 600; margin-left: 6px; }
+  .pago-badge { display: inline-block; font-size: 0.74rem; padding: 3px 9px; border-radius: 999px; font-weight: 600; margin-left: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text-muted); cursor: pointer; font-family: inherit; }
+  .pago-badge.parcial { background: var(--accent-bg); color: var(--accent); border-color: var(--accent-bg); }
+  .pago-badge.pagado { background: var(--positive-bg); color: var(--positive); border-color: var(--positive-bg); }
   .cancel-edit-btn { width: 100%; padding: 10px; margin-top: 8px; border: none; background: none; color: var(--text-muted); font-family: inherit; font-size: 0.86rem; cursor: pointer; }
   .item-row .remove-item { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.8rem; }
   .item-row .remove-item:hover { color: var(--danger); }
@@ -203,6 +208,29 @@
     </form>
   </div>
 
+  <div class="card">
+    <h2>Abonar al corte de madera</h2>
+    <form id="abonoForm">
+      <div class="row two">
+        <div>
+          <label for="abonoFecha">Fecha</label>
+          <input type="date" id="abonoFecha" required>
+        </div>
+        <div>
+          <label for="abonoMonto">Monto abonado</label>
+          <input type="number" id="abonoMonto" step="any" min="0" required placeholder="0">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="abonoNotas">Notas (opcional)</label>
+          <input type="text" id="abonoNotas" placeholder="A quién se le pagó, forma de pago...">
+        </div>
+      </div>
+      <button type="submit" class="secondary" id="abonoSubmitBtn">Registrar abono</button>
+    </form>
+  </div>
+
   <section>
     <h3>Viajes y pagos</h3>
     <div class="filters" id="filters"></div>
@@ -221,6 +249,12 @@
   <section>
     <h3>Rentabilidad</h3>
     <div class="summary-grid" id="rentabilityGrid"></div>
+  </section>
+
+  <section>
+    <h3>Abonos al corte de madera</h3>
+    <div id="corteSaldoWrap" class="summary-grid" style="margin-bottom: 12px;"></div>
+    <div id="abonosList"></div>
   </section>
 
   <section>
@@ -254,6 +288,7 @@
   let companies = [];
   let trips = [];
   let payments = [];
+  let abonosCorte = [];
   let activeFilter = 'Todas';
   let itemIdSeq = 0;
   let formItems = [];
@@ -261,6 +296,7 @@
 
   document.getElementById('fecha').valueAsDate = new Date();
   document.getElementById('pagoFecha').valueAsDate = new Date();
+  document.getElementById('abonoFecha').valueAsDate = new Date();
 
   function showOfflineNote() { document.getElementById('offlineNote').style.display = 'block'; }
   function hideOfflineNote() { document.getElementById('offlineNote').style.display = 'none'; }
@@ -276,7 +312,7 @@
   function groupTrips(rows) {
     const map = {};
     rows.forEach(r => {
-      if (!map[r.viajeId]) map[r.viajeId] = { id: r.viajeId, fecha: toDateOnly(r.fecha), empresa: r.empresa, notas: r.notas, flete: parseFloat(r.flete) || 0, corteToneladas: parseFloat(r.corteToneladas) || 0, cortePrecioTon: parseFloat(r.cortePrecioTon) || 0, costoCorte: parseFloat(r.costoCorte) || 0, items: [] };
+      if (!map[r.viajeId]) map[r.viajeId] = { id: r.viajeId, fecha: toDateOnly(r.fecha), empresa: r.empresa, notas: r.notas, flete: parseFloat(r.flete) || 0, corteToneladas: parseFloat(r.corteToneladas) || 0, cortePrecioTon: parseFloat(r.cortePrecioTon) || 0, costoCorte: parseFloat(r.costoCorte) || 0, estadoPago: r.estadoPago || '', items: [] };
       map[r.viajeId].items.push({ tipo: r.tipo, cantidad: r.cantidad, medida: r.medida, precioUnitario: r.precioUnitario, subtotal: r.subtotal });
     });
     return Object.values(map).map(t => {
@@ -293,13 +329,14 @@
       trips = groupTrips(data.trips || []);
       companies = (data.companies || []).map(nombre => ({ nombre }));
       payments = (data.payments || []).slice().sort((a, b) => (a.fecha > b.fecha ? 1 : -1));
+      abonosCorte = (data.abonosCorte || []).slice().sort((a, b) => (a.fecha > b.fecha ? 1 : -1));
       hideOfflineNote();
       renderAll();
     } catch (e) { showOfflineNote(); }
   }
 
   function renderAll() {
-    renderCompanySelects(); renderFilters(); renderTrips(); renderPayments(); renderHero(); renderRentability(); renderSummary();
+    renderCompanySelects(); renderFilters(); renderTrips(); renderPayments(); renderHero(); renderRentability(); renderCorteAbonos(); renderSummary();
   }
 
   async function postAction(payload, applyLocal) {
@@ -520,12 +557,16 @@
       costoCorte,
       notas: document.getElementById('notas').value.trim()
     };
-    if (editingTripId) payload.viajeId = editingTripId;
+    if (editingTripId) {
+      payload.viajeId = editingTripId;
+      const existing = trips.find(t => t.id === editingTripId);
+      payload.estadoPago = existing ? existing.estadoPago : '';
+    }
 
     const wasEditing = editingTripId;
     const ok = await postAction(payload, (data) => {
       const total = items.reduce((s, i) => s + i.subtotal, 0);
-      const tripObj = { id: wasEditing || data.viajeId, fecha: payload.fecha, empresa, notas: payload.notas, items, flete, corteToneladas, cortePrecioTon, costoCorte, total, neto: total - flete - costoCorte };
+      const tripObj = { id: wasEditing || data.viajeId, fecha: payload.fecha, empresa, notas: payload.notas, items, flete, corteToneladas, cortePrecioTon, costoCorte, estadoPago: payload.estadoPago || '', total, neto: total - flete - costoCorte };
       if (wasEditing) {
         const idx = trips.findIndex(t => t.id === wasEditing);
         if (idx > -1) trips[idx] = tripObj; else trips.unshift(tripObj);
@@ -565,6 +606,53 @@
     btn.disabled = false;
   });
 
+  document.getElementById('abonoForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const monto = parseFloat(document.getElementById('abonoMonto').value) || 0;
+    if (monto <= 0) return;
+
+    const fecha = document.getElementById('abonoFecha').value;
+    const notas = document.getElementById('abonoNotas').value.trim();
+    const btn = document.getElementById('abonoSubmitBtn');
+    btn.disabled = true;
+
+    const ok = await postAction({ action: 'addAbonoCorte', fecha, monto, notas }, (data) => {
+      abonosCorte.push({ abonoId: data.abonoId, fecha, monto, notas });
+      abonosCorte.sort((a, b) => (a.fecha > b.fecha ? 1 : -1));
+    });
+
+    if (ok) {
+      document.getElementById('abonoForm').reset();
+      document.getElementById('abonoFecha').valueAsDate = new Date();
+    }
+    btn.disabled = false;
+  });
+
+  function renderCorteAbonos() {
+    const costoCorteTotal = trips.reduce((s, t) => s + (t.costoCorte || 0), 0);
+    const abonado = abonosCorte.reduce((s, a) => s + (a.monto || 0), 0);
+    const saldoWrap = document.getElementById('corteSaldoWrap');
+    saldoWrap.innerHTML = `<div class="summary-card"><div class="name">Saldo por pagar del corte</div><div class="stats">
+      <div>Costo total<span class="v">${fmt.format(costoCorteTotal)}</span></div>
+      <div>Abonado<span class="v">${fmt.format(abonado)}</span></div>
+      <div>Pendiente<span class="v pendiente-v">${fmt.format(costoCorteTotal - abonado)}</span></div></div></div>`;
+
+    const list = document.getElementById('abonosList');
+    list.innerHTML = '';
+    if (abonosCorte.length === 0) { list.innerHTML = '<div class="empty-state">Aún no hay abonos registrados.</div>'; return; }
+    abonosCorte.forEach(a => {
+      const row = document.createElement('div');
+      row.className = 'payment';
+      const left = document.createElement('div');
+      left.innerHTML = `<div class="empresa">${fechaLegible(a.fecha)}</div><div class="meta">${a.notas || ''}</div><div class="monto">${fmt.format(a.monto)}</div>`;
+      const del = document.createElement('button');
+      del.className = 'del-btn'; del.textContent = 'Eliminar';
+      del.addEventListener('click', () => { if (confirm('¿Eliminar este abono?')) postAction({ action: 'deleteAbonoCorte', abonoId: a.abonoId }, () => { abonosCorte = abonosCorte.filter(x => x.abonoId !== a.abonoId); }); });
+      row.appendChild(left); row.appendChild(del);
+      list.appendChild(row);
+    });
+  }
+
   function renderFilters() {
     const wrap = document.getElementById('filters');
     wrap.innerHTML = '';
@@ -585,6 +673,17 @@
     return `Alfarda · ${fmtNum(it.cantidad)} unid${medida} · ${precioTxt}${it.precioUnitario ? '/unid' : ''}`;
   }
 
+  const ESTADO_CYCLE = ['', 'Parcial', 'Pagado'];
+  function nextEstado(cur) {
+    const idx = ESTADO_CYCLE.indexOf(cur || '');
+    return ESTADO_CYCLE[(idx + 1) % ESTADO_CYCLE.length];
+  }
+  function estadoLabel(estado) {
+    if (estado === 'Pagado') return 'Pagado';
+    if (estado === 'Parcial') return 'Abono parcial';
+    return 'Pendiente';
+  }
+
   function renderTrips() {
     const list = document.getElementById('tripsList');
     list.innerHTML = '';
@@ -593,7 +692,8 @@
 
     filtered.forEach(t => {
       const row = document.createElement('div');
-      row.className = 'trip';
+      const estado = t.estadoPago || '';
+      row.className = 'trip' + (estado === 'Pagado' ? ' status-pagado' : estado === 'Parcial' ? ' status-parcial' : '');
       const fechaFmt = fechaLegible(t.fecha);
 
       const head = document.createElement('div');
@@ -601,6 +701,18 @@
       const hasPending = (t.items || []).some(it => !it.precioUnitario);
       const left = document.createElement('div');
       left.innerHTML = `<div class="empresa">${t.empresa}${hasPending ? '<span class="pending-badge">Precio pendiente</span>' : ''}</div><div class="meta">${fechaFmt}${t.notas ? ' · ' + t.notas : ''}</div>`;
+      const payBtn = document.createElement('button');
+      payBtn.type = 'button';
+      payBtn.className = 'pago-badge' + (estado === 'Pagado' ? ' pagado' : estado === 'Parcial' ? ' parcial' : '');
+      payBtn.textContent = estadoLabel(estado);
+      payBtn.addEventListener('click', () => {
+        const nuevo = nextEstado(estado);
+        postAction({ action: 'setEstadoPago', viajeId: t.id, estado: nuevo }, () => {
+          const tt = trips.find(x => x.id === t.id);
+          if (tt) tt.estadoPago = nuevo;
+        });
+      });
+      left.querySelector('.empresa').appendChild(payBtn);
       const btnGroup = document.createElement('div');
       btnGroup.style.display = 'flex'; btnGroup.style.gap = '10px'; btnGroup.style.flexShrink = '0';
       const edit = document.createElement('button');
