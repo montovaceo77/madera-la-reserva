@@ -23,7 +23,7 @@
   .refresh-btn { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-family: inherit; font-size: 0.84rem; cursor: pointer; white-space: nowrap; }
   .hero { background: var(--primary); color: var(--primary-text); border-radius: 14px; padding: 22px 22px 20px; margin-bottom: 22px; }
   .hero .label { font-size: 0.88rem; opacity: 0.82; margin-bottom: 4px; }
-  .hero .amount { font-family: 'Fraunces', Georgia, serif; font-size: 2.4rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .hero .amount { font-family: 'Inter', system-ui, sans-serif; font-size: 2.3rem; font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
   .hero .breakdown { display: flex; gap: 22px; margin-top: 14px; font-size: 0.86rem; opacity: 0.9; flex-wrap: wrap; }
   .hero .breakdown strong { font-variant-numeric: tabular-nums; display: block; font-size: 1rem; }
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 20px; }
@@ -107,7 +107,7 @@
   .kpi-card.alt { background: var(--card); color: var(--text); border: 1px solid var(--border); }
   .kpi-card .label { font-size: 0.78rem; opacity: 0.85; margin-bottom: 6px; }
   .kpi-card.alt .label { color: var(--text-muted); opacity: 1; }
-  .kpi-card .value { font-family: 'Fraunces', Georgia, serif; font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .kpi-card .value { font-family: 'Inter', system-ui, sans-serif; font-size: 1.45rem; font-weight: 600; letter-spacing: -0.005em; font-variant-numeric: tabular-nums; }
   .hbar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
   .hbar-row:last-child { margin-bottom: 0; }
   .hbar-label { width: 130px; flex-shrink: 0; font-size: 0.86rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1087,29 +1087,6 @@
       const pct = Math.max((val / max) * 100, 3);
       row.innerHTML = `<div class="hbar-label">${name}</div><div class="hbar-track"><div class="hbar-fill" style="width:${pct}%"><span>${fmt.format(val)}</span></div></div>`;
       wrap.appendChild(row);
-    });
-  }
-
-  function renderMonthChart(rTrips) {
-    const wrap = document.getElementById('monthChart');
-    const byMonth = {};
-    rTrips.forEach(t => {
-      if (!t.fecha) return;
-      const key = t.fecha.slice(0, 7);
-      byMonth[key] = (byMonth[key] || 0) + tripValor(t);
-    });
-    const keys = Object.keys(byMonth).sort();
-    if (keys.length === 0) { wrap.innerHTML = '<div class="empty-state">Sin datos para este filtro.</div>'; return; }
-    const max = Math.max(...keys.map(k => byMonth[k]), 1);
-    wrap.innerHTML = '';
-    keys.forEach(k => {
-      const val = byMonth[k];
-      const h = Math.max((val / max) * 100, 3);
-      const [y, m] = k.split('-');
-      const col = document.createElement('div');
-      col.className = 'vbar-col';
-      col.innerHTML = `<div class="vbar-val">${val ? fmt.format(val) : ''}</div><div class="vbar-fill" style="height:${h}%"></div><div class="vbar-label">${MESES[parseInt(m,10)-1]} ${y.slice(2)}</div>`;
-      wrap.appendChild(col);
     });
   }
 
