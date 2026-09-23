@@ -117,6 +117,7 @@
       <div>Pagado <strong id="heroPagado">$0</strong></div>
       <div>Viajes registrados <strong id="heroCount">0</strong></div>
       <div>Con precio pendiente <strong id="heroPendientePrecio">0</strong></div>
+      <div>Toneladas totales <strong id="heroToneladas">0</strong></div>
     </div>
   </div>
 
@@ -785,6 +786,8 @@
     document.getElementById('heroCount').textContent = fmtNum(trips.length);
     const pendingPriceCount = trips.filter(t => (t.items || []).some(it => !it.precioUnitario)).length;
     document.getElementById('heroPendientePrecio').textContent = fmtNum(pendingPriceCount);
+    const toneladasTotales = trips.reduce((s, t) => s + (t.corteToneladas || 0), 0);
+    document.getElementById('heroToneladas').textContent = fmtNum(toneladasTotales) + ' ton';
   }
 
   function renderRentability() {
