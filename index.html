@@ -383,11 +383,6 @@
   </section>
 
   <section>
-    <h3>Evolución mensual de ingresos</h3>
-    <div class="card"><div class="vbar-chart" id="monthChart"></div></div>
-  </section>
-
-  <section>
     <h3>Resumen por empresa</h3>
     <div class="card table-scroll">
       <table>
@@ -401,7 +396,9 @@
     <h3>Rentabilidad y corte de madera</h3>
     <div class="kpi-grid">
       <div class="kpi-card alt"><div class="label">Fletes</div><div class="value" id="kpiFletes">$0</div></div>
+      <div class="kpi-card alt"><div class="label">Flete por tonelada</div><div class="value" id="kpiFletePorTon">$0</div></div>
       <div class="kpi-card alt"><div class="label">Costo de corte</div><div class="value" id="kpiCostoCorte">$0</div></div>
+      <div class="kpi-card alt"><div class="label">Corte por tonelada</div><div class="value" id="kpiCortePorTon">$0</div></div>
       <div class="kpi-card alt"><div class="label">Abonado al corte</div><div class="value" id="kpiAbonado">$0</div></div>
       <div class="kpi-card alt"><div class="label">Pendiente del corte</div><div class="value" id="kpiCortePendiente">$0</div></div>
     </div>
@@ -1065,12 +1062,13 @@
     document.getElementById('kpiToneladas').textContent = fmtNum(toneladas) + ' ton';
     document.getElementById('kpiViajes').textContent = fmtNum(rTrips.length);
     document.getElementById('kpiFletes').textContent = fmt.format(fletes);
+    document.getElementById('kpiFletePorTon').textContent = toneladas > 0 ? fmt.format(fletes / toneladas) : '$0';
     document.getElementById('kpiCostoCorte').textContent = fmt.format(costoCorteTotal);
+    document.getElementById('kpiCortePorTon').textContent = toneladas > 0 ? fmt.format(costoCorteTotal / toneladas) : '$0';
     document.getElementById('kpiAbonado').textContent = fmt.format(abonado);
     document.getElementById('kpiCortePendiente').textContent = fmt.format(costoCorteTotal - abonado);
 
     renderEmpresaChart(rTrips);
-    renderMonthChart(rTrips);
     renderEmpresaTable(rTrips, rPays);
     renderRecentTable(rTrips);
   }
